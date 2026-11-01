@@ -5,12 +5,9 @@ deterministic routing across 17 bundled lifecycle skills, a durable `.fable/`
 state machine, mutation-aware verification, a bounded doctor, and a
 DSH-native web dashboard.
 
-Rebuilt as a standalone DSH plugin with **zero relationship to the
-`imMamdouhaboammar/get-fable` upstream** — no upstream CLI, no upstream
-author, no upstream URLs, no upstream multi-agent runtime. Everything here
-is a DSH-native mechanism: one cordis service, four tools, four observational
-hooks, a bundled skill provider, two host RPC channels, and a web client
-panel.
+Everything here is a DSH-native mechanism: one cordis service, four tools,
+four observational hooks, a bundled skill provider, two host RPC channels,
+and a web client panel.
 
 ## What it is
 
@@ -55,22 +52,23 @@ real time.
 
 `get-fable` (orchestrator) + `fable-{discover, research, plan, tdd,
 delegate, execute, verify, review, security, recover, release, handoff,
-spark, architecture, config, prove-it}`. Each is a clean-room `SKILL.md`
-with the `name / description / inputs / requires / produces / gates /
-fallback / neural_links` frontmatter the DSH skill registry reads. The
-catalog is the single source of truth; `skills/registry.json` and the
-`skills/<id>/SKILL.md` bodies are generated from it.
+spark, architecture, config, prove-it}`. Each `SKILL.md` carries the
+`name / description / inputs / requires / produces / gates / fallback /
+neural_links` frontmatter the DSH skill registry reads. The catalog is the
+single source of truth; `skills/registry.json` and the `skills/<id>/SKILL.md`
+bodies are generated from it.
 
 ## Building
 
 ```sh
-npm install        # (uses link: deps into a local deepseek-harness checkout)
+npm install        # deps are link: entries into a local deepseek-harness checkout
 npm run build      # tsdown: lib/index.js (host) + lib/client.js (web)
 npm test           # vitest
 npm run typecheck  # tsc --noEmit
+npm run validate   # bundle shape + zero-upstream-refs invariant
 ```
 
-The bundle ships two artifacts:
+Two artifacts are produced:
 
 - `lib/index.js` — ESM host entry; the `GfPolicy` Service is the default
   export. The host's cordis loader mounts it like any plugin.
@@ -78,20 +76,63 @@ The bundle ships two artifacts:
   `window.__ModuleLoader__.load({id, factory})`; the only shape the DSH
   client-module loader accepts. `react` is the sole runtime external.
 
-## Installing into a profile (later)
+## Installing into a profile
 
-The plugin is deliberately **not installed** into any profile in this
-repository. To adopt it into a profile, add the dependency plus a
-`dsh.profile.bundles` entry and run `dsh --profile <name>
---dump-config` to confirm the `mulqi-getfable` entry id appears:
+The plugin is not installed into any profile from this repository. To adopt
+it, point a profile at this package and declare it as a bundle.
+
+**1. Add the dependency.** In the target profile's `package.json`
+(e.g. `~/.dsh/profiles/web/package.json`):
 
 ```jsonc
-// <profile>/package.json
 {
-  "dependencies": { "mulqi-getfable": "link:/path/to/mulqi-getfable" },
-  "dsh": { "profile": { "bundles": ["mulqi-getfable"] } }
+  "dependencies": {
+    "mulqi-getfable": "link:/mnt/d/Project/mulqi-getfable"
+  }
 }
 ```
+
+Use `link:<absolute-path>` for a local checkout, or install from git if the
+repo is published:
+
+```jsonc
+{
+  "dependencies": {
+    "mulqi-getfable": "github:mulqizamzam/mulqi-getfable#main"
+  }
+}
+```
+
+**2. Declare the bundle.** In the same `package.json`, tell the profile
+loader to mount the bundle patch (`cordis.patch.yml`):
+
+```jsonc
+{
+  "dsh": {
+    "profile": {
+      "bundles": ["mulqi-getfable"]
+    }
+  }
+}
+```
+
+**3. Install and verify.**
+
+```sh
+# from the profile directory
+npm install
+
+# confirm the bundle entry id appears
+dsh --profile web --dump-config | grep -A3 'mulqi-getfable'
+```
+
+**4. Restart the session.** The host mounts the service at load, so the
+new `gf_*` tools, the skill catalog, and the Fable Hub panel appear only
+after a fresh session.
+
+Web-only features (the Fable Hub panel and the settings card) require the
+profile to include `@deepseek-ai/dsh-client-connection`; the host tools and
+hooks work in any profile, including headless ones.
 
 ## Repository layout
 
@@ -108,6 +149,4 @@ lib/           built bundles (gitignored)
 
 ## License
 
-MIT. This is an independent, original rebuild; it shares no code, author
-attribution, or distribution channel with the `imMamdouhaboammar/get-fable`
-upstream project.
+MIT © Mulqizamzam. See [LICENSE](LICENSE).

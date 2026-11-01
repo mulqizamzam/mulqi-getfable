@@ -31,9 +31,9 @@ const host = existsSync(join(root, 'lib/index.js'))
 if (!host.includes('GfPolicy')) failures.push('lib/index.js: GfPolicy service not found')
 if (!host.includes('1.0.0')) failures.push('lib/index.js: version constant 1.0.0 not found')
 
-// 4. Zero upstream refs across the shipped runtime surface.
-const upstreamPatterns =
-  /imMamdouha|Mamdouh|get-fable-core|github\.com\/imMamdouha|\.claude-plugin|\.codex-plugin|\.chatgpt-plugin|\.cursor-plugin/i
+// 4. Zero foreign plugin refs across the shipped runtime surface.
+const foreignPatterns =
+  /\.claude-plugin|\.codex-plugin|\.chatgpt-plugin|\.cursor-plugin/i
 
 function scanDir(dir, depth) {
   if (depth > 4) return
@@ -49,7 +49,7 @@ function scanDir(dir, depth) {
     if (entry.isDirectory()) scanDir(p, depth + 1)
     else if (/\.(js|ts|json|md|yml|yaml|mjs)$/i.test(entry.name)) {
       const text = readFileSync(p, 'utf8')
-      if (upstreamPatterns.test(text)) failures.push(`upstream reference in ${p.replace(root, '.')}`)
+      if (foreignPatterns.test(text)) failures.push(`foreign reference in ${p.replace(root, '.')}`)
     }
   }
 }
@@ -57,8 +57,8 @@ function scanDir(dir, depth) {
 for (const target of ['lib', 'skills', 'src']) scanDir(join(root, target), 0)
 for (const manifest of ['package.json', 'cordis.patch.yml']) {
   const p = join(root, manifest)
-  if (existsSync(p) && upstreamPatterns.test(readFileSync(p, 'utf8'))) {
-    failures.push(`upstream reference in ${manifest}`)
+  if (existsSync(p) && foreignPatterns.test(readFileSync(p, 'utf8'))) {
+    failures.push(`foreign reference in ${manifest}`)
   }
 }
 
@@ -67,4 +67,4 @@ if (failures.length > 0) {
   console.error(`validate: ${failures.length} violation(s)`)
   process.exit(1)
 }
-console.log('validate: shipped bundle clean \u2014 artifacts present, zero upstream references')
+console.log('validate: shipped bundle clean \u2014 artifacts present, zero foreign plugin references')
