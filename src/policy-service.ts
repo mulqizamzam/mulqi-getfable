@@ -95,8 +95,8 @@ export class GfPolicy extends Service {
    * exec's agent. Fall back to the host process cwd only when that service is
    * absent (headless profile) or refuses the agent.
    */
-  private async resolveRoot(exec?: ToolRunContext): Promise<string> {
-    if (exec !== undefined && exec !== null && exec.agent !== undefined) {
+  private async resolveRoot(exec?: ToolRunContext | string): Promise<string> {
+    if (exec !== undefined && exec !== null && typeof exec !== 'string' && exec.agent !== undefined) {
       try {
         const get = (this.ctx as unknown as { get?: (name: string) => unknown }).get
         const dirs = typeof get === 'function'
@@ -143,10 +143,12 @@ export class GfPolicy extends Service {
 
   private wireHooks(): void {
     const on = (e: string, l: unknown) => (this.ctx as unknown as { on: (e: string, l: unknown) => void }).on(e, l)
-    // agent/pre-step — waterfall; must call next() to admit the step.
-    on('agent/pre-step', async (_payload: unknown, next: () => Promise<unknown>) => {
+    // agent/pre-step — waterfall; must call next() to admit the step. The
+    // payload carries the step's `agent`, so the root resolves from the session
+    // instead of from the host process cwd.
+    on('agent/pre-step', async (payload: unknown, next: () => Promise<unknown>) => {
       try {
-        this.applyContextSummary()
+        await this.applyContextSummary(payload as ToolRunContext)
       } catch {
         /* fail-open: a helper error must not veto the step */
       }
@@ -161,7 +163,7 @@ export class GfPolicy extends Service {
         result = await next()
       } finally {
         try {
-          this.noteMutation(exec)
+          await this.noteMutation(exec as ToolRunContext)
         } catch {
           /* fail-open */
         }
@@ -170,12 +172,12 @@ export class GfPolicy extends Service {
     })
 
     // tools/result — emit; record command success/failure for the fail-streak.
+    // An emit listener cannot hand a promise to the emitter, so the async
+    // bookkeeping is fire-and-forget and swallows its own failure.
     on('tools/result', (exec: unknown, result: unknown) => {
-      try {
-        this.noteResult(exec, result)
-      } catch {
+      void this.noteResult(exec as ToolRunContext, result).catch(() => {
         /* fail-open */
-      }
+      })
     })
 
     // session/event — privacy-minimal metadata journal.
@@ -188,8 +190,8 @@ export class GfPolicy extends Service {
     })
   }
 
-  private applyContextSummary(): void {
-    const store = openStateStore(projectRootOf(undefined))
+  private async applyContextSummary(exec?: ToolRunContext | string): Promise<void> {
+    const store = openStateStore(await this.resolveRoot(exec))
     if (!store.hasProject) return
     const state = store.loadSync()
     if (state === null) return
@@ -200,10 +202,10 @@ export class GfPolicy extends Service {
     this.ctx.logger?.('gf')?.info?.(`[mulqi-getfable] ${summary}`)
   }
 
-  private noteMutation(exec: unknown): void {
-    const name = String((exec as { name?: unknown })?.name ?? '')
+  private async noteMutation(exec: ToolRunContext | string): Promise<void> {
+    const name = String((exec as unknown as { name?: unknown })?.name ?? '')
     if (!MUTATING_TOOLS.has(normalizeToolName(name))) return
-    const store = openStateStore(projectRootOf(exec as ToolRunContext))
+    const store = openStateStore(await this.resolveRoot(exec))
     if (!store.hasProject) return
     const state = store.loadSync()
     if (state === null) return
@@ -214,15 +216,15 @@ export class GfPolicy extends Service {
     })
   }
 
-  private noteResult(exec: unknown, result: unknown): void {
-    const name = String((exec as { name?: unknown })?.name ?? '').toLowerCase()
+  private async noteResult(exec: ToolRunContext | string, result: unknown): Promise<void> {
+    const name = String((exec as unknown as { name?: unknown })?.name ?? '').toLowerCase()
     if (name !== 'bash' && name !== 'shell') return
     const raw = result as { is_error?: boolean; isError?: boolean; output?: unknown }
     const isError =
       raw?.is_error === true ||
       raw?.isError === true ||
       (typeof raw?.output === 'string' && /\bexit\s*code\s*[:=]?\s*[1-9]\d*/i.test(raw.output))
-    const store = openStateStore(projectRootOf(exec as ToolRunContext))
+    const store = openStateStore(await this.resolveRoot(exec))
     if (!store.hasProject) return
     const state = store.loadSync()
     if (state === null) return
