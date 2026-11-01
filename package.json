@@ -1,7 +1,7 @@
 {
   "name": "mulqi-getfable",
   "version": "1.0.0",
-  "description": "Mulqi GetFable \u2014 a portable coding-lifecycle discipline for DeepSeek Harness: deterministic routing across 16 lifecycle skills, durable .fable state machine, mutation-aware verification, a bounded doctor, and a DSH-native web dashboard.",
+  "description": "Mulqi GetFable — a portable coding-lifecycle discipline for DeepSeek Harness: deterministic routing across 17 lifecycle skills, durable .fable state machine, mutation-aware verification, a bounded doctor, and a DSH-native web dashboard.",
   "type": "module",
   "main": "./lib/index.js",
   "exports": {
@@ -29,12 +29,22 @@
     "ai-agent"
   ],
   "license": "MIT",
+  "author": "Mulqizamzam",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mulqizamzam/mulqi-getfable.git"
+  },
+  "homepage": "https://github.com/mulqizamzam/mulqi-getfable#readme",
+  "bugs": {
+    "url": "https://github.com/mulqizamzam/mulqi-getfable/issues"
+  },
   "engines": {
     "node": ">=22"
   },
   "scripts": {
     "build": "tsdown",
     "build:skills": "node scripts/generate-skills.mjs",
+    "prepare": "tsdown",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "validate": "node scripts/validate-bundle.mjs"
@@ -53,28 +63,17 @@
       ]
     }
   },
-  "dependencies": {
-    "@deepseek-ai/cordis": "link:/home/administrator/deepseek-harness/vendor/cordis",
-    "@deepseek-ai/dsh-skill": "link:/home/administrator/deepseek-harness/packages/skill/skill",
-    "@deepseek-ai/dsh-tools": "link:/home/administrator/deepseek-harness/packages/core/tools",
-    "@deepseek-ai/dsh-llm": "link:/home/administrator/deepseek-harness/packages/llm/llm"
-  },
-  "devDependencies": {
-    "@types/node": "^22.0.0",
-    "@types/react": "^18.3.0",
-    "react": "^18.2.0",
-    "tsdown": "^0.22.0",
-    "typescript": "^5.9.0",
-    "vitest": "^3.2.0"
-  },
   "peerDependencies": {
-    "@deepseek-ai/cordis": "link:/home/administrator/deepseek-harness/vendor/cordis",
-    "@deepseek-ai/dsh-skill": "link:/home/administrator/deepseek-harness/packages/skill/skill",
-    "@deepseek-ai/dsh-tools": "link:/home/administrator/deepseek-harness/packages/core/tools",
-    "@deepseek-ai/dsh-llm": "link:/home/administrator/deepseek-harness/packages/llm/llm"
+    "@deepseek-ai/cordis": ">=4.0.5",
+    "@deepseek-ai/dsh-llm": ">=0.2.1-rc.2",
+    "@deepseek-ai/dsh-skill": ">=0.2.1-rc.2",
+    "@deepseek-ai/dsh-tools": ">=0.2.1-rc.2"
   },
   "peerDependenciesMeta": {
     "@deepseek-ai/cordis": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-llm": {
       "optional": true
     },
     "@deepseek-ai/dsh-skill": {
@@ -82,9 +81,18 @@
     },
     "@deepseek-ai/dsh-tools": {
       "optional": true
-    },
-    "@deepseek-ai/dsh-llm": {
-      "optional": true
     }
+  },
+  "devDependencies": {
+    "@deepseek-ai/cordis": ">=4.0.5",
+    "@deepseek-ai/dsh-llm": ">=0.2.1-rc.2",
+    "@deepseek-ai/dsh-skill": ">=0.2.1-rc.2",
+    "@deepseek-ai/dsh-tools": ">=0.2.1-rc.2",
+    "@types/node": "^22.0.0",
+    "@types/react": "^18.3.0",
+    "react": "^18.2.0",
+    "tsdown": "^0.22.0",
+    "typescript": "^5.9.0",
+    "vitest": "^3.2.0"
   }
 }

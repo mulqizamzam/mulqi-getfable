@@ -61,12 +61,17 @@ bodies are generated from it.
 ## Building
 
 ```sh
-npm install        # deps are link: entries into a local deepseek-harness checkout
+npm install        # prepares the bundle (see the `prepare` script)
 npm run build      # tsdown: lib/index.js (host) + lib/client.js (web)
 npm test           # vitest
 npm run typecheck  # tsc --noEmit
-npm run validate   # bundle shape + zero-upstream-refs invariant
+npm run validate   # bundle shape + no-foreign-plugin-references invariant
 ```
+
+`@deepseek-ai/*` are declared as optional peer dependencies, so they resolve
+from the DSH host that loads the plugin rather than being bundled here. The
+`prepare` script runs the same `tsdown` build, which is why a `git+https`
+install produces `lib/` even though the build output is not committed.
 
 Two artifacts are produced:
 
