@@ -71,20 +71,46 @@ export class GfPolicy extends Service {
 
   private wireTools(): void {
     const tools = (this.ctx as unknown as { tools: GfToolRuntime }).tools
-    tools.register(this.toolSpec('gf_status', 'Return the canonical mulqi-getfable runtime state: active phase, failure streak against the recovery threshold, unverified mutation debt, plan progress, and doctor health.', (_args, exec) => ok(this.status(exec))))
+    tools.register(this.toolSpec('gf_status', 'Return the canonical mulqi-getfable runtime state: active phase, failure streak against the recovery threshold, unverified mutation debt, plan progress, and doctor health.', async (_args, exec) => ok(this.status(await this.resolveRoot(exec)))))
     tools.register(this.toolSpec('gf_route', 'Execute the mulqi-getfable task router on a task string. Read-only by default (apply omitted/false); apply:true persists the decision into the durable .fable state.', (args, exec) => this.routeTool(args, exec), routeParams()))
     tools.register(this.toolSpec('gf_doctor', 'Run bounded mulqi-getfable diagnostics over the .fable project state. With fix:true, perform one idempotent bounded repair and report what it changed.', (args, exec) => this.doctorTool(args, exec), doctorParams()))
     tools.register(this.toolSpec('gf_skills', 'Return the registry of mulqi-getfable canonical lifecycle skills with categories and load state.', () => ok(this.skillInfos())))
   }
 
-  private routeTool(args: Record<string, unknown>, exec: ToolRunContext): unknown {
+  private async routeTool(args: Record<string, unknown>, exec: ToolRunContext): Promise<unknown> {
     const task = typeof args.task === 'string' ? args.task : ''
     if (task === '') return fail('bad-request', 'gf_route requires a non-empty task string')
-    return this.routeResponse({ task, apply: args.apply === true }, exec)
+    return this.routeResponse({ task, apply: args.apply === true }, await this.resolveRoot(exec))
   }
 
-  private doctorTool(args: Record<string, unknown>, exec: ToolRunContext): unknown {
-    return this.doctor(args.fix === true, exec)
+  private async doctorTool(args: Record<string, unknown>, exec: ToolRunContext): Promise<unknown> {
+    return this.doctor(args.fix === true, await this.resolveRoot(exec))
+  }
+
+  /**
+   * Resolve the session's project root for one tool call.
+   *
+   * `ToolRunContext` carries no cwd of its own; the host exposes the session
+   * working directory through the `workingDirectory` service, keyed by the
+   * exec's agent. Fall back to the host process cwd only when that service is
+   * absent (headless profile) or refuses the agent.
+   */
+  private async resolveRoot(exec?: ToolRunContext): Promise<string> {
+    if (exec !== undefined && exec !== null && exec.agent !== undefined) {
+      try {
+        const get = (this.ctx as unknown as { get?: (name: string) => unknown }).get
+        const dirs = typeof get === 'function'
+          ? (get.call(this.ctx, 'workingDirectory') as { ensure?: (agent: unknown, signal?: unknown) => Promise<string | undefined> } | undefined)
+          : undefined
+        if (dirs !== undefined && dirs !== null && typeof dirs.ensure === 'function') {
+          const cwd = await dirs.ensure(exec.agent, exec.signal)
+          if (typeof cwd === 'string' && cwd !== '') return cwd
+        }
+      } catch {
+        /* fail-open: fall back to the process cwd */
+      }
+    }
+    return projectRootOf(exec)
   }
 
   private toolSpec(
