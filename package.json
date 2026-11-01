@@ -44,7 +44,6 @@
   "scripts": {
     "build": "tsdown",
     "build:skills": "node scripts/generate-skills.mjs",
-    "prepare": "tsdown",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "validate": "node scripts/validate-bundle.mjs"
