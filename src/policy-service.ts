@@ -332,17 +332,24 @@ export class GfPolicy extends Service {
 
   // --------------------------------------------------------------- queries
 
-  private storeFor(exec?: ToolRunContext | string): ReturnType<typeof openStateStore> {
-    return openStateStore(projectRootOf(exec))
+  /**
+   * Open the state store at an already-resolved project root.
+   *
+   * Takes a root string only -- never a ToolRunContext. Accepting the exec here
+   * is exactly how an unresolved context used to fall through to process.cwd()
+   * and read the wrong project.
+   */
+  private storeFor(root?: string): ReturnType<typeof openStateStore> {
+    return openStateStore(root ?? process.cwd())
   }
 
-  private status(exec?: ToolRunContext | string): GfStatusSnapshot {
-    const { state } = this.serve(exec)
+  private status(root?: string): GfStatusSnapshot {
+    const { state } = this.serve(root)
     const phase = state?.phase ?? 'idle'
     const failStreak = state?.failStreak ?? 0
     const mutationDebt = state === null ? 0 : Math.max(0, state.mutationGeneration - state.verifiedGeneration)
     const planProgress = planProgressPercent(state)
-    const doctor = this.doctor(false, exec).healthy
+    const doctor = this.doctor(false, root).healthy
     return {
       version: PLUGIN_VERSION,
       phase,
@@ -380,8 +387,8 @@ export class GfPolicy extends Service {
     }
   }
 
-  private plan(exec?: ToolRunContext | string): GfPlanSnapshot {
-    const { state } = this.serve(exec)
+  private plan(root?: string): GfPlanSnapshot {
+    const { state } = this.serve(root)
     const cards = state?.cards ?? []
     const phases = cards.map((card, i) => ({
       id: card.id !== '' ? card.id : `card-${i}`,
@@ -407,8 +414,8 @@ export class GfPolicy extends Service {
     }))
   }
 
-  private doctor(fix: boolean, exec?: ToolRunContext | string): GfDoctorReport {
-    const store = this.storeFor(exec)
+  private doctor(fix: boolean, root?: string): GfDoctorReport {
+    const store = this.storeFor(root)
     let ledgerText: string | undefined
     try {
       const fs = require('node:fs') as typeof import('node:fs')
@@ -422,11 +429,11 @@ export class GfPolicy extends Service {
     return runDoctor({ store, ledgerText, fix })
   }
 
-  private routeResponse(req: GfRouteRequest, exec?: ToolRunContext | string): GfRouteResponse {
-    const { state } = this.serve(exec)
+  private routeResponse(req: GfRouteRequest, root?: string): GfRouteResponse {
+    const { state } = this.serve(root)
     const decision = route({ task: req.task, state })
     if (req.apply === true) {
-      const store = this.storeFor(exec)
+      const store = this.storeFor(root)
       if (store.hasProject) {
         const base = state ?? emptyState()
         const next: FableState = {
@@ -456,8 +463,8 @@ export class GfPolicy extends Service {
   }
 
   /** Load-or-default for the current project root. */
-  private serve(exec?: ToolRunContext | string): { store: ReturnType<typeof openStateStore>; state: FableState | null } {
-    const store = this.storeFor(exec)
+  private serve(root?: string): { store: ReturnType<typeof openStateStore>; state: FableState | null } {
+    const store = this.storeFor(root)
     return { store, state: store.loadSync() }
   }
 }
