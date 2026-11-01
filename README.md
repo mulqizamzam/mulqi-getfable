@@ -61,7 +61,7 @@ bodies are generated from it.
 ## Building
 
 ```sh
-npm install        # prepares the bundle (see the `prepare` script)
+npm install        # dev dependencies only; no install-time build
 npm run build      # tsdown: lib/index.js (host) + lib/client.js (web)
 npm test           # vitest
 npm run typecheck  # tsc --noEmit
@@ -69,9 +69,12 @@ npm run validate   # bundle shape + no-foreign-plugin-references invariant
 ```
 
 `@deepseek-ai/*` are declared as optional peer dependencies, so they resolve
-from the DSH host that loads the plugin rather than being bundled here. The
-`prepare` script runs the same `tsdown` build, which is why a `git+https`
-install produces `lib/` even though the build output is not committed.
+from the DSH host that loads the plugin rather than being bundled here.
+
+There is **no `prepare` script**. `lib/` is committed and shipped in the
+`files` list, so `dsh plugin add github:…` installs a working plugin with no
+build step and no toolchain on the consumer's machine. Build locally only
+when changing `src/`, then commit the regenerated `lib/`.
 
 Two artifacts are produced:
 
@@ -83,36 +86,55 @@ Two artifacts are produced:
 
 ## Installing into a profile
 
-The plugin is not installed into any profile from this repository. To adopt
-it, point a profile at this package and declare it as a bundle.
+Three supported routes. Route 1 is the standard DSH path and the one to use
+unless you are developing the plugin itself.
 
-**1. Add the dependency.** In the target profile's `package.json`
+Requirements: DSH `>=0.2.1-rc.2` and Node `>=22`, both declared in
+`package.json` under `dsh.engines.dsh` and `engines.node`.
+
+`lib/` ships prebuilt and the manifest has **no** `prepare` script, so a git
+install needs no build step. The package has **no runtime dependencies** —
+`@deepseek-ai/*` are optional peers resolved from the DSH host that loads it.
+
+### 1. Standard: `dsh plugin add` (git)
+
+```sh
+dsh plugin --profile web add github:mulqizamzam/mulqi-getfable
+```
+
+`dsh plugin` forwards the remaining arguments to the profile's package
+manager. When the package operation succeeds, DSH reconciles the profile: a
+dependency that declares `dsh.bundle.patch` in its manifest is activated
+automatically. This package does declare one (`./cordis.patch.yml`), so the
+entry lands in **both** `dependencies` and `dsh.profile.bundles`. There is
+nothing to hand-edit afterwards.
+
+Pin a revision when you want a reproducible install:
+
+```sh
+dsh plugin --profile web add github:mulqizamzam/mulqi-getfable#<commit-sha-or-tag>
+```
+
+### 2. Local checkout (plugin development)
+
+```sh
+dsh plugin --profile web add link:/absolute/path/to/mulqi-getfable
+```
+
+A `link:` spec points the profile at your working tree, so a rebuild is
+picked up on the next session. Use this while iterating; switch to the git
+spec for a stable install.
+
+### 3. Manual manifest edit (no CLI)
+
+If you are provisioning a profile by hand, edit the profile's `package.json`
 (e.g. `~/.dsh/profiles/web/package.json`):
 
 ```jsonc
 {
   "dependencies": {
-    "mulqi-getfable": "link:/mnt/d/Project/mulqi-getfable"
-  }
-}
-```
-
-Use `link:<absolute-path>` for a local checkout, or install from git if the
-repo is published:
-
-```jsonc
-{
-  "dependencies": {
     "mulqi-getfable": "github:mulqizamzam/mulqi-getfable#main"
-  }
-}
-```
-
-**2. Declare the bundle.** In the same `package.json`, tell the profile
-loader to mount the bundle patch (`cordis.patch.yml`):
-
-```jsonc
-{
+  },
   "dsh": {
     "profile": {
       "bundles": ["mulqi-getfable"]
@@ -121,19 +143,48 @@ loader to mount the bundle patch (`cordis.patch.yml`):
 }
 ```
 
-**3. Install and verify.**
+Then install with the profile's own package manager. Profiles created by DSH
+use pnpm:
 
 ```sh
-# from the profile directory
-npm install
-
-# confirm the bundle entry id appears
-dsh --profile web --dump-config | grep -A3 'mulqi-getfable'
+cd ~/.dsh/profiles/web
+pnpm install
 ```
 
-**4. Restart the session.** The host mounts the service at load, so the
-new `gf_*` tools, the skill catalog, and the Fable Hub panel appear only
-after a fresh session.
+Both halves matter. A dependency without the matching `bundles` entry
+installs the package but mounts nothing — no `gf_*` tools, no panel. That
+second step is exactly what route 1 does for you.
+
+### Verify
+
+```sh
+# the bundle layer resolves and mounts
+dsh --profile web --dump-config | grep -A3 mulqi-getfable
+```
+
+In a fresh session `gf_status` returns `ok: true` with a `version` and
+`phase`, and `gf_skills` lists the 17 lifecycle skills.
+
+### Remove
+
+```sh
+dsh plugin --profile web remove mulqi-getfable
+```
+
+Removal drops the dependency, the bundle entry, and the installed tree in
+one step. Do not delete the directory under `node_modules` by hand — that
+leaves a dangling `bundles` entry the loader will fail to resolve.
+
+### Not on npm
+
+`mulqi-getfable` is not published to the npm registry — `npm view
+mulqi-getfable` returns `404`. Install from git or from a local `link:`
+spec; `npm install mulqi-getfable` will not resolve.
+
+### Restart
+
+The host mounts the service at load, so the new `gf_*` tools, the skill
+catalog, and the Fable Hub panel appear only after a fresh session.
 
 Web-only features (the Fable Hub panel and the settings card) require the
 profile to include `@deepseek-ai/dsh-client-connection`; the host tools and
@@ -149,7 +200,7 @@ src/
   client/      web client entry (lib/client.js)
 skills/        registry.json + 17 generated SKILL.md
 test/          vitest suites
-lib/           built bundles (gitignored)
+lib/           built bundles (committed; no prepare script)
 ```
 
 ## License
