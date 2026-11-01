@@ -1,0 +1,585 @@
+{
+  "schemaVersion": 2,
+  "entry": "get-fable",
+  "skills": [
+    {
+      "id": "get-fable",
+      "order": 0,
+      "phase": "idle",
+      "pack": "core",
+      "description": "Orchestrate software engineering workflows across the canonical lifecycle with deterministic routing and evidence precedence. Use when starting a complex coding task, navigating lifecycle phases, resuming work with durable .fable state, or routing between research, planning, testing, verification, and recovery. Do NOT use when an individual specialist skill already has clear isolated ownership of a bounded subtask.",
+      "inputs": [
+        "task_description",
+        "current_state"
+      ],
+      "requires": [
+        "repo_access"
+      ],
+      "produces": [
+        "routing_decision"
+      ],
+      "gates": [
+        "state_schema_valid"
+      ],
+      "fallback": null,
+      "mutatesWorkspace": false,
+      "parallelSafe": true,
+      "next": [
+        "fable-discover",
+        "fable-research",
+        "fable-plan",
+        "fable-tdd",
+        "fable-delegate",
+        "fable-execute",
+        "fable-verify",
+        "fable-review",
+        "fable-security",
+        "fable-recover",
+        "fable-release",
+        "fable-handoff"
+      ],
+      "keywords": [
+        "fable",
+        "lifecycle",
+        "orchestration",
+        "routing"
+      ],
+      "audience": "consumer"
+    },
+    {
+      "id": "fable-discover",
+      "order": 10,
+      "phase": "discovering",
+      "pack": "core",
+      "description": "Gather the smallest set of repository, environment, documentation, and runtime evidence needed before planning or changing code. Use when the repository layout, build system, entry points, or runtime behaviour is unknown.",
+      "inputs": [
+        "exploration_intent"
+      ],
+      "requires": [
+        "repo_access"
+      ],
+      "produces": [
+        "repository_evidence",
+        "environment_facts"
+      ],
+      "gates": [
+        "load_bearing_unknowns_resolved"
+      ],
+      "fallback": "fable-recover",
+      "mutatesWorkspace": false,
+      "parallelSafe": true,
+      "next": [
+        "fable-research",
+        "fable-plan",
+        "fable-tdd",
+        "fable-execute"
+      ],
+      "keywords": [
+        "discover",
+        "inspect",
+        "trace",
+        "repository"
+      ],
+      "audience": "consumer"
+    },
+    {
+      "id": "fable-research",
+      "order": 20,
+      "phase": "discovering",
+      "pack": "core",
+      "description": "Resolve current external facts, official documentation, library behaviour, and API contracts against primary sources before implementation. Use when a third-party dependency or external service is uncertain.",
+      "inputs": [
+        "research_question"
+      ],
+      "requires": [
+        "network_or_docs"
+      ],
+      "produces": [
+        "external_facts",
+        "api_contract"
+      ],
+      "gates": [
+        "primary_source_cited"
+      ],
+      "fallback": "fable-recover",
+      "mutatesWorkspace": false,
+      "parallelSafe": true,
+      "next": [
+        "fable-plan",
+        "fable-tdd",
+        "fable-execute"
+      ],
+      "keywords": [
+        "research",
+        "api",
+        "documentation",
+        "external"
+      ],
+      "audience": "consumer"
+    },
+    {
+      "id": "fable-plan",
+      "order": 30,
+      "phase": "planned",
+      "pack": "core",
+      "description": "Convert discovery evidence into bounded, testable work cards with explicit acceptance criteria and architectural invariants. Use when architecture, decomposition, or contract choice is the load-bearing decision.",
+      "inputs": [
+        "evidence_set"
+      ],
+      "requires": [
+        "repository_evidence"
+      ],
+      "produces": [
+        "work_cards",
+        "architectural_invariants"
+      ],
+      "gates": [
+        "cards_bounded",
+        "acceptance_explicit"
+      ],
+      "fallback": "fable-recover",
+      "mutatesWorkspace": false,
+      "parallelSafe": false,
+      "next": [
+        "fable-tdd",
+        "fable-delegate",
+        "fable-execute"
+      ],
+      "keywords": [
+        "plan",
+        "architect",
+        "decompose",
+        "contract"
+      ],
+      "audience": "consumer"
+    },
+    {
+      "id": "fable-tdd",
+      "order": 40,
+      "phase": "executing",
+      "pack": "core",
+      "description": "Drive testable behaviour changes and bug fixes through disciplined red-green-refactor cycles with observable regression tests. Use when the next step is a testable behaviour change.",
+      "inputs": [
+        "work_card"
+      ],
+      "requires": [
+        "test_harness"
+      ],
+      "produces": [
+        "failing_test",
+        "passing_implementation",
+        "regression_test"
+      ],
+      "gates": [
+        "red_observed",
+        "green_observed"
+      ],
+      "fallback": "fable-recover",
+      "mutatesWorkspace": true,
+      "parallelSafe": false,
+      "next": [
+        "fable-verify",
+        "fable-review"
+      ],
+      "keywords": [
+        "tdd",
+        "bug",
+        "regression",
+        "red-green-refactor"
+      ],
+      "audience": "consumer"
+    },
+    {
+      "id": "fable-delegate",
+      "order": 50,
+      "phase": "planned",
+      "pack": "core",
+      "description": "Delegate independent bounded subtasks to parallel workers with strict disjoint ownership and explicit acceptance contracts. Use when genuinely independent cards can run without shared state.",
+      "inputs": [
+        "independent_cards"
+      ],
+      "requires": [
+        "cards_bounded"
+      ],
+      "produces": [
+        "delegation_plan",
+        "disjoint_ownership"
+      ],
+      "gates": [
+        "no_shared_state",
+        "ownership_disjoint"
+      ],
+      "fallback": "fable-execute",
+      "mutatesWorkspace": false,
+      "parallelSafe": true,
+      "next": [
+        "fable-verify"
+      ],
+      "keywords": [
+        "delegate",
+        "parallel",
+        "fan-out",
+        "disjoint"
+      ],
+      "audience": "consumer"
+    },
+    {
+      "id": "fable-execute",
+      "order": 60,
+      "phase": "executing",
+      "pack": "core",
+      "description": "Implement one accepted, bounded work card with immediate local verification, invariant preservation, and zero scope drift. Use when a single card is ready to be built.",
+      "inputs": [
+        "work_card"
+      ],
+      "requires": [
+        "acceptance_contract"
+      ],
+      "produces": [
+        "implementation",
+        "local_verification"
+      ],
+      "gates": [
+        "invariants_preserved",
+        "no_scope_drift"
+      ],
+      "fallback": "fable-recover",
+      "mutatesWorkspace": true,
+      "parallelSafe": false,
+      "next": [
+        "fable-verify"
+      ],
+      "keywords": [
+        "execute",
+        "implement",
+        "build"
+      ],
+      "audience": "consumer"
+    },
+    {
+      "id": "fable-verify",
+      "order": 70,
+      "phase": "verifying",
+      "pack": "core",
+      "description": "Falsify implementations and gather fresh, machine-checked acceptance proof across tests, builds, typechecks, and runtime smoke checks before completion. Use when a claim must be proven, not assumed.",
+      "inputs": [
+        "implementation",
+        "acceptance_contract"
+      ],
+      "requires": [
+        "test_harness"
+      ],
+      "produces": [
+        "verification_evidence"
+      ],
+      "gates": [
+        "fresh_evidence",
+        "machine_checked"
+      ],
+      "fallback": "fable-recover",
+      "mutatesWorkspace": false,
+      "parallelSafe": true,
+      "next": [
+        "fable-review",
+        "fable-release"
+      ],
+      "keywords": [
+        "verify",
+        "falsify",
+        "test",
+        "smoke"
+      ],
+      "audience": "consumer"
+    },
+    {
+      "id": "fable-review",
+      "order": 80,
+      "phase": "verifying",
+      "pack": "core",
+      "description": "Perform an independent, evidence-grounded review of git diffs against requested specifications, architectural invariants, and code standards. Use when a diff needs a correctness pass by a fresh reviewer.",
+      "inputs": [
+        "diff",
+        "spec"
+      ],
+      "requires": [
+        "diff_available"
+      ],
+      "produces": [
+        "review_findings"
+      ],
+      "gates": [
+        "independent_reviewer"
+      ],
+      "fallback": "fable-execute",
+      "mutatesWorkspace": false,
+      "parallelSafe": true,
+      "next": [
+        "fable-release"
+      ],
+      "keywords": [
+        "review",
+        "diff",
+        "correctness"
+      ],
+      "audience": "consumer"
+    },
+    {
+      "id": "fable-security",
+      "order": 90,
+      "phase": "verifying",
+      "pack": "core",
+      "description": "Conduct threat modeling, vulnerability assessment, secret sanitization, and security review across trust boundaries, auth flows, and untrusted inputs. Use when the task touches a trust boundary, secret, credential, or authorization check.",
+      "inputs": [
+        "trust_boundary",
+        "diff"
+      ],
+      "requires": [
+        "threat_model"
+      ],
+      "produces": [
+        "security_findings",
+        "sanitized_secrets"
+      ],
+      "gates": [
+        "boundary_map",
+        "no_secret_exposure"
+      ],
+      "fallback": "fable-recover",
+      "mutatesWorkspace": false,
+      "parallelSafe": false,
+      "next": [
+        "fable-verify",
+        "fable-release"
+      ],
+      "keywords": [
+        "security",
+        "vulnerability",
+        "secret",
+        "trust-boundary",
+        "authz"
+      ],
+      "audience": "consumer"
+    },
+    {
+      "id": "fable-recover",
+      "order": 100,
+      "phase": "recovering",
+      "pack": "core",
+      "description": "Diagnose repeated or contradictory failures by proving the execution path before touching product logic, then record a revised hypothesis. Use when two consecutive failures have moved the workflow into recovering.",
+      "inputs": [
+        "failure_evidence",
+        "hypothesis"
+      ],
+      "requires": [
+        "failure_log"
+      ],
+      "produces": [
+        "revised_hypothesis",
+        "path_proof"
+      ],
+      "gates": [
+        "harness_proven",
+        "execution_path_proven"
+      ],
+      "fallback": "fable-discover",
+      "mutatesWorkspace": false,
+      "parallelSafe": false,
+      "next": [
+        "fable-tdd",
+        "fable-execute"
+      ],
+      "keywords": [
+        "recover",
+        "diagnose",
+        "failure",
+        "hypothesis"
+      ],
+      "audience": "consumer"
+    },
+    {
+      "id": "fable-release",
+      "order": 110,
+      "phase": "verifying",
+      "pack": "core",
+      "description": "Decide distribution readiness: a candidate is releasable only with fresh, machine-checked evidence matching the current mutation generation. Use when a candidate is ready for a ship / tag / deploy decision.",
+      "inputs": [
+        "candidate",
+        "evidence"
+      ],
+      "requires": [
+        "verification_evidence"
+      ],
+      "produces": [
+        "release_decision"
+      ],
+      "gates": [
+        "evidence_current_generation"
+      ],
+      "fallback": "fable-verify",
+      "mutatesWorkspace": false,
+      "parallelSafe": false,
+      "next": [
+        "fable-handoff"
+      ],
+      "keywords": [
+        "release",
+        "ship",
+        "deploy",
+        "distribution"
+      ],
+      "audience": "consumer"
+    },
+    {
+      "id": "fable-handoff",
+      "order": 120,
+      "phase": "verifying",
+      "pack": "core",
+      "description": "Produce a complete, self-contained handoff so another session or agent can resume: durable state, the active card, open findings, and what must be re-verified. Use when work moves to another session or agent.",
+      "inputs": [
+        "durable_state",
+        "active_card"
+      ],
+      "requires": [
+        "state_complete"
+      ],
+      "produces": [
+        "handoff_document"
+      ],
+      "gates": [
+        "self_contained"
+      ],
+      "fallback": "fable-recover",
+      "mutatesWorkspace": false,
+      "parallelSafe": true,
+      "next": [],
+      "keywords": [
+        "handoff",
+        "resume",
+        "continue"
+      ],
+      "audience": "consumer"
+    },
+    {
+      "id": "fable-spark",
+      "order": 130,
+      "phase": "idle",
+      "pack": "intelligence",
+      "description": "Suggest the single next atomic move inside active work when the route is unclear. Use at a session boundary or when the operator asks what to do next without re-running the whole router.",
+      "inputs": [
+        "current_state"
+      ],
+      "requires": [
+        "durable_state"
+      ],
+      "produces": [
+        "next_move"
+      ],
+      "gates": [],
+      "fallback": "get-fable",
+      "mutatesWorkspace": false,
+      "parallelSafe": true,
+      "next": [
+        "fable-execute"
+      ],
+      "keywords": [
+        "spark",
+        "next",
+        "hint"
+      ],
+      "audience": "consumer"
+    },
+    {
+      "id": "fable-architecture",
+      "order": 140,
+      "phase": "planned",
+      "pack": "design",
+      "description": "Evaluate architectural triggers (scale, concurrency, domain decoupling, resource intensity) and lock out monolithic scaffolding when a distributed paradigm is warranted. Use at inception when a spec crosses scale or decoupling thresholds.",
+      "inputs": [
+        "spec"
+      ],
+      "requires": [
+        "spec_present"
+      ],
+      "produces": [
+        "architecture_decision"
+      ],
+      "gates": [
+        "scale_evaluated",
+        "domain_evaluated"
+      ],
+      "fallback": "fable-plan",
+      "mutatesWorkspace": false,
+      "parallelSafe": false,
+      "next": [
+        "fable-plan"
+      ],
+      "keywords": [
+        "architecture",
+        "microservice",
+        "scale",
+        "concurrency"
+      ],
+      "audience": "consumer"
+    },
+    {
+      "id": "fable-config",
+      "order": 150,
+      "phase": "idle",
+      "pack": "system",
+      "description": "Read and reason about the project configuration surface (toolchain, build flags, environment) before changing it. Use when a task depends on build or runtime configuration and the current values are unknown.",
+      "inputs": [
+        "config_intent"
+      ],
+      "requires": [
+        "repo_access"
+      ],
+      "produces": [
+        "config_facts"
+      ],
+      "gates": [],
+      "fallback": "fable-discover",
+      "mutatesWorkspace": false,
+      "parallelSafe": true,
+      "next": [
+        "fable-plan"
+      ],
+      "keywords": [
+        "config",
+        "toolchain",
+        "environment"
+      ],
+      "audience": "consumer"
+    },
+    {
+      "id": "fable-prove-it",
+      "order": 160,
+      "phase": "verifying",
+      "pack": "core",
+      "description": "Produce a minimal, runnable proof for a specific claim: a command, a diff, a round-trip, or a measured value. Use when the operator needs one concrete piece of evidence, not a full verification pass.",
+      "inputs": [
+        "claim"
+      ],
+      "requires": [
+        "claim_falsifiable"
+      ],
+      "produces": [
+        "proof_artifact"
+      ],
+      "gates": [
+        "fresh_evidence"
+      ],
+      "fallback": "fable-verify",
+      "mutatesWorkspace": false,
+      "parallelSafe": true,
+      "next": [
+        "fable-verify"
+      ],
+      "keywords": [
+        "prove",
+        "evidence",
+        "demo"
+      ],
+      "audience": "consumer"
+    }
+  ]
+}

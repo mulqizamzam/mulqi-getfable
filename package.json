@@ -1,0 +1,90 @@
+{
+  "name": "mulqi-getfable",
+  "version": "1.0.0",
+  "description": "Mulqi GetFable \u2014 a portable coding-lifecycle discipline for DeepSeek Harness: deterministic routing across 16 lifecycle skills, durable .fable state machine, mutation-aware verification, a bounded doctor, and a DSH-native web dashboard.",
+  "type": "module",
+  "main": "./lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/",
+    "skills/",
+    "cordis.patch.yml",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "deepseek-harness",
+    "dsh",
+    "dsh-plugin",
+    "cordis",
+    "agent-skills",
+    "coding-lifecycle",
+    "tdd",
+    "verification",
+    "deterministic-routing",
+    "ai-agent"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "build:skills": "node scripts/generate-skills.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "validate": "node scripts/validate-bundle.mjs"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "engines": {
+      "dsh": ">=0.2.1-rc.2"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-connection"
+      ]
+    }
+  },
+  "dependencies": {
+    "@deepseek-ai/cordis": "link:/home/administrator/deepseek-harness/vendor/cordis",
+    "@deepseek-ai/dsh-skill": "link:/home/administrator/deepseek-harness/packages/skill/skill",
+    "@deepseek-ai/dsh-tools": "link:/home/administrator/deepseek-harness/packages/core/tools",
+    "@deepseek-ai/dsh-llm": "link:/home/administrator/deepseek-harness/packages/llm/llm"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/react": "^18.3.0",
+    "react": "^18.2.0",
+    "tsdown": "^0.22.0",
+    "typescript": "^5.9.0",
+    "vitest": "^3.2.0"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "link:/home/administrator/deepseek-harness/vendor/cordis",
+    "@deepseek-ai/dsh-skill": "link:/home/administrator/deepseek-harness/packages/skill/skill",
+    "@deepseek-ai/dsh-tools": "link:/home/administrator/deepseek-harness/packages/core/tools",
+    "@deepseek-ai/dsh-llm": "link:/home/administrator/deepseek-harness/packages/llm/llm"
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/cordis": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-skill": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-tools": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-llm": {
+      "optional": true
+    }
+  }
+}
