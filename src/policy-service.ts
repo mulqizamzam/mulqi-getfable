@@ -30,7 +30,7 @@ import {
   type GfStatusSnapshot,
 } from './core/wire.ts'
 
-export const PLUGIN_VERSION = '1.0.0'
+export const PLUGIN_VERSION = '1.0.1'
 
 declare module '@deepseek-ai/cordis' {
   interface Context {
@@ -40,22 +40,6 @@ declare module '@deepseek-ai/cordis' {
 
 type GfToolRuntime = import('@deepseek-ai/dsh-tools').ToolRuntime
 type GfSkillRegistry = import('@deepseek-ai/dsh-skill').SkillRegistry
-
-/**
- * Resolve the project root. DSH tools expose `exec.context.cwd`; without a
- * session context the host's own working directory is the project root.
- */
-function projectRootOf(exec: ToolRunContext | undefined | string): string {
-  if (typeof exec === 'string' && exec !== '') return exec
-  if (exec !== undefined && exec !== null) {
-    const ctx = (exec as unknown as { context?: { cwd?: unknown } }).context
-    if (ctx !== undefined && ctx !== null && typeof ctx === 'object') {
-      const cwd = (ctx as { cwd?: unknown }).cwd
-      if (typeof cwd === 'string' && cwd !== '') return cwd
-    }
-  }
-  return process.cwd()
-}
 
 export class GfPolicy extends Service {
   static inject = ['tools', 'skills'] as const
@@ -88,15 +72,17 @@ export class GfPolicy extends Service {
   }
 
   /**
-   * Resolve the session's project root for one tool call.
+   * Resolve the session's project root -- the single place that maps an exec
+   * onto a directory.
    *
    * `ToolRunContext` carries no cwd of its own; the host exposes the session
    * working directory through the `workingDirectory` service, keyed by the
    * exec's agent. Fall back to the host process cwd only when that service is
-   * absent (headless profile) or refuses the agent.
+   * absent (headless profile) or refuses the agent. Every caller hands the
+   * resolved string to `storeFor`, which accepts nothing else.
    */
-  private async resolveRoot(exec?: ToolRunContext | string): Promise<string> {
-    if (exec !== undefined && exec !== null && typeof exec !== 'string' && exec.agent !== undefined) {
+  private async resolveRoot(exec?: ToolRunContext): Promise<string> {
+    if (exec !== undefined && exec !== null && exec.agent !== undefined) {
       try {
         const get = (this.ctx as unknown as { get?: (name: string) => unknown }).get
         const dirs = typeof get === 'function'
@@ -110,7 +96,7 @@ export class GfPolicy extends Service {
         /* fail-open: fall back to the process cwd */
       }
     }
-    return projectRootOf(exec)
+    return process.cwd()
   }
 
   private toolSpec(
@@ -190,7 +176,7 @@ export class GfPolicy extends Service {
     })
   }
 
-  private async applyContextSummary(exec?: ToolRunContext | string): Promise<void> {
+  private async applyContextSummary(exec?: ToolRunContext): Promise<void> {
     const store = openStateStore(await this.resolveRoot(exec))
     if (!store.hasProject) return
     const state = store.loadSync()
@@ -202,7 +188,7 @@ export class GfPolicy extends Service {
     this.ctx.logger?.('gf')?.info?.(`[mulqi-getfable] ${summary}`)
   }
 
-  private async noteMutation(exec: ToolRunContext | string): Promise<void> {
+  private async noteMutation(exec?: ToolRunContext): Promise<void> {
     const name = String((exec as unknown as { name?: unknown })?.name ?? '')
     if (!MUTATING_TOOLS.has(normalizeToolName(name))) return
     const store = openStateStore(await this.resolveRoot(exec))
@@ -216,7 +202,7 @@ export class GfPolicy extends Service {
     })
   }
 
-  private async noteResult(exec: ToolRunContext | string, result: unknown): Promise<void> {
+  private async noteResult(exec: ToolRunContext | undefined, result: unknown): Promise<void> {
     const name = String((exec as unknown as { name?: unknown })?.name ?? '').toLowerCase()
     if (name !== 'bash' && name !== 'shell') return
     const raw = result as { is_error?: boolean; isError?: boolean; output?: unknown }

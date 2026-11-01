@@ -24,12 +24,18 @@ if (!/^window\.__ModuleLoader__\.load\(\{\s*id:\s*"mulqi-getfable",/s.test(clien
   failures.push('lib/client.js: not a __ModuleLoader__ bundle with id "mulqi-getfable"')
 }
 
-// 3. Host bundle exports the Service and the version.
+// 3. Host bundle exports the Service and the version. The expected version
+// comes from the manifest, so a release bump cannot silently fail validation.
+const manifest = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'))
+const version = String(manifest.version ?? '')
+if (version === '') failures.push('package.json: version missing')
 const host = existsSync(join(root, 'lib/index.js'))
   ? readFileSync(join(root, 'lib/index.js'), 'utf8')
   : ''
 if (!host.includes('GfPolicy')) failures.push('lib/index.js: GfPolicy service not found')
-if (!host.includes('1.0.0')) failures.push('lib/index.js: version constant 1.0.0 not found')
+if (version !== '' && !host.includes(version)) {
+  failures.push(`lib/index.js: version constant ${version} not found`)
+}
 
 // 4. Zero foreign plugin refs across the shipped runtime surface.
 const foreignPatterns =

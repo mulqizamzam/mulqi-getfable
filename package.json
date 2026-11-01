@@ -1,6 +1,6 @@
 {
   "name": "mulqi-getfable",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Mulqi GetFable — a portable coding-lifecycle discipline for DeepSeek Harness: deterministic routing across 17 lifecycle skills, durable .fable state machine, mutation-aware verification, a bounded doctor, and a DSH-native web dashboard.",
   "type": "module",
   "main": "./lib/index.js",
