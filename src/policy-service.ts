@@ -45,7 +45,8 @@ type GfSkillRegistry = import('@deepseek-ai/dsh-skill').SkillRegistry
  * Resolve the project root. DSH tools expose `exec.context.cwd`; without a
  * session context the host's own working directory is the project root.
  */
-function projectRootOf(exec: ToolRunContext | undefined): string {
+function projectRootOf(exec: ToolRunContext | undefined | string): string {
+  if (typeof exec === 'string' && exec !== '') return exec
   if (exec !== undefined && exec !== null) {
     const ctx = (exec as unknown as { context?: { cwd?: unknown } }).context
     if (ctx !== undefined && ctx !== null && typeof ctx === 'object') {
@@ -70,7 +71,7 @@ export class GfPolicy extends Service {
 
   private wireTools(): void {
     const tools = (this.ctx as unknown as { tools: GfToolRuntime }).tools
-    tools.register(this.toolSpec('gf_status', 'Return the canonical mulqi-getfable runtime state: active phase, failure streak against the recovery threshold, unverified mutation debt, plan progress, and doctor health.', () => ok(this.status())))
+    tools.register(this.toolSpec('gf_status', 'Return the canonical mulqi-getfable runtime state: active phase, failure streak against the recovery threshold, unverified mutation debt, plan progress, and doctor health.', (_args, exec) => ok(this.status(exec))))
     tools.register(this.toolSpec('gf_route', 'Execute the mulqi-getfable task router on a task string. Read-only by default (apply omitted/false); apply:true persists the decision into the durable .fable state.', (args, exec) => this.routeTool(args, exec), routeParams()))
     tools.register(this.toolSpec('gf_doctor', 'Run bounded mulqi-getfable diagnostics over the .fable project state. With fix:true, perform one idempotent bounded repair and report what it changed.', (args, exec) => this.doctorTool(args, exec), doctorParams()))
     tools.register(this.toolSpec('gf_skills', 'Return the registry of mulqi-getfable canonical lifecycle skills with categories and load state.', () => ok(this.skillInfos())))
@@ -79,11 +80,11 @@ export class GfPolicy extends Service {
   private routeTool(args: Record<string, unknown>, exec: ToolRunContext): unknown {
     const task = typeof args.task === 'string' ? args.task : ''
     if (task === '') return fail('bad-request', 'gf_route requires a non-empty task string')
-    return this.routeResponse({ task, apply: args.apply === true })
+    return this.routeResponse({ task, apply: args.apply === true }, exec)
   }
 
-  private doctorTool(args: Record<string, unknown>, _exec: ToolRunContext): unknown {
-    return this.doctor(args.fix === true)
+  private doctorTool(args: Record<string, unknown>, exec: ToolRunContext): unknown {
+    return this.doctor(args.fix === true, exec)
   }
 
   private toolSpec(
@@ -303,17 +304,17 @@ export class GfPolicy extends Service {
 
   // --------------------------------------------------------------- queries
 
-  private storeFor(exec?: ToolRunContext): ReturnType<typeof openStateStore> {
+  private storeFor(exec?: ToolRunContext | string): ReturnType<typeof openStateStore> {
     return openStateStore(projectRootOf(exec))
   }
 
-  private status(): GfStatusSnapshot {
-    const { state } = this.serve()
+  private status(exec?: ToolRunContext | string): GfStatusSnapshot {
+    const { state } = this.serve(exec)
     const phase = state?.phase ?? 'idle'
     const failStreak = state?.failStreak ?? 0
     const mutationDebt = state === null ? 0 : Math.max(0, state.mutationGeneration - state.verifiedGeneration)
     const planProgress = planProgressPercent(state)
-    const doctor = this.doctor(false).healthy
+    const doctor = this.doctor(false, exec).healthy
     return {
       version: PLUGIN_VERSION,
       phase,
@@ -351,8 +352,8 @@ export class GfPolicy extends Service {
     }
   }
 
-  private plan(): GfPlanSnapshot {
-    const { state } = this.serve()
+  private plan(exec?: ToolRunContext | string): GfPlanSnapshot {
+    const { state } = this.serve(exec)
     const cards = state?.cards ?? []
     const phases = cards.map((card, i) => ({
       id: card.id !== '' ? card.id : `card-${i}`,
@@ -378,8 +379,8 @@ export class GfPolicy extends Service {
     }))
   }
 
-  private doctor(fix: boolean): GfDoctorReport {
-    const store = this.storeFor(undefined)
+  private doctor(fix: boolean, exec?: ToolRunContext | string): GfDoctorReport {
+    const store = this.storeFor(exec)
     let ledgerText: string | undefined
     try {
       const fs = require('node:fs') as typeof import('node:fs')
@@ -393,11 +394,11 @@ export class GfPolicy extends Service {
     return runDoctor({ store, ledgerText, fix })
   }
 
-  private routeResponse(req: GfRouteRequest): GfRouteResponse {
-    const { state } = this.serve()
+  private routeResponse(req: GfRouteRequest, exec?: ToolRunContext | string): GfRouteResponse {
+    const { state } = this.serve(exec)
     const decision = route({ task: req.task, state })
     if (req.apply === true) {
-      const store = this.storeFor(undefined)
+      const store = this.storeFor(exec)
       if (store.hasProject) {
         const base = state ?? emptyState()
         const next: FableState = {
@@ -427,8 +428,8 @@ export class GfPolicy extends Service {
   }
 
   /** Load-or-default for the current project root. */
-  private serve(): { store: ReturnType<typeof openStateStore>; state: FableState | null } {
-    const store = this.storeFor(undefined)
+  private serve(exec?: ToolRunContext | string): { store: ReturnType<typeof openStateStore>; state: FableState | null } {
+    const store = this.storeFor(exec)
     return { store, state: store.loadSync() }
   }
 }
