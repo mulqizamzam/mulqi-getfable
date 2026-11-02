@@ -59,14 +59,14 @@ function makeCtx() {
 }
 
 describe('GfPolicy service wiring', () => {
-  it('registers the four canonical tools', () => {
+  it('registers the five canonical tools', () => {
     const { ctx, registeredTools } = makeCtx()
     new GfPolicy(ctx as never)
     const names = registeredTools.map((d) => (d as { name: string }).name)
     expect(names).toEqual(
-      expect.arrayContaining(['gf_status', 'gf_route', 'gf_doctor', 'gf_skills']),
+      expect.arrayContaining(['gf_status', 'gf_route', 'gf_doctor', 'gf_skills', 'gf_handoff']),
     )
-    expect(names).toHaveLength(4)
+    expect(names).toHaveLength(5)
   })
 
   it('registers a bundled skill provider', () => {

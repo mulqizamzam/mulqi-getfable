@@ -5,7 +5,7 @@ deterministic routing across 17 bundled lifecycle skills, a durable `.fable/`
 state machine, mutation-aware verification, a bounded doctor, and a
 DSH-native web dashboard.
 
-Everything here is a DSH-native mechanism: one cordis service, four tools,
+Everything here is a DSH-native mechanism: one cordis service, five tools,
 four observational hooks, a bundled skill provider, two host RPC channels,
 and a web client panel.
 
@@ -20,7 +20,7 @@ One `Service` (`ctx.gf`) owns the whole loop:
 | Bounded doctor | `src/core/doctor.ts` — checks opt-in, schema, generation debt, fail-streak, ledger lint; one idempotent repair on `fix:true` |
 | Human ledger | `task_plan.md` cards (`- [ ]` / `- [x]` / `- [~]`) with the acceptance / evidence / reason markers lint-checked |
 | Lifecycle hooks | `agent/pre-step` (context summary), `tools/execute` (advance mutation generation on write tools), `tools/result` (record command success/failure → fail-streak → recovery), `session/event` (privacy-minimal journal) |
-| Tools | `gf_status`, `gf_route` (preview or apply), `gf_doctor` (diagnose or repair), `gf_skills` (registry) |
+| Tools | `gf_status`, `gf_route` (preview or apply), `gf_doctor` (diagnose or repair), `gf_skills` (registry), `gf_handoff` (self-contained handoff document) |
 | Skill catalog | 17 lifecycle skills, registered as a read-only provider on `ctx.skills` |
 | Web dashboard | Fable Hub panel (`conversation.view`) + settings self-test card (`settings.section`), talking to the host over `/mulqi-gf-read` + `/mulqi-gf-write` |
 
@@ -47,6 +47,7 @@ real time.
 | `gf_route` | Route a task string. Read-only by default; `apply:true` persists the decision into the durable `.fable` state. |
 | `gf_doctor` | Bounded diagnostics over the `.fable` state. `fix:true` performs one idempotent repair. |
 | `gf_skills` | Registry of the bundled lifecycle skills with load state. |
+| `gf_handoff` | Build a self-contained handoff document: durable state, active card, what remains, open ledger findings, and an explicit re-verify list. Read-only. |
 
 ## Lifecycle skills (17)
 

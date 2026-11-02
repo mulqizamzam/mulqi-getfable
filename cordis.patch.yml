@@ -2,7 +2,7 @@
 # Registers the mulqi-getfable host plugin in the active DSH profile.
 # The base profile already provides the shared skill registry, tool registry,
 # and the web client-module loader; this entry mounts the policy service,
-# which in turn contributes the four tools, the four observational hooks,
+# which in turn contributes the five tools, the four observational hooks,
 # the bundled skill provider, and the two host RPC channels.
 - insert:
     - id: mulqi-getfable

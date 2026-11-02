@@ -12,11 +12,13 @@
  * Every hook is fail-open: a helper error never throws into the host session.
  * Malformed *project* state is surfaced to the doctor, not raised.
  */
+import { existsSync, readFileSync } from 'node:fs'
 import { Service, type Context } from '@deepseek-ai/cordis'
 import type { ToolDefinition, ToolRunContext } from '@deepseek-ai/dsh-tools'
 import type { ContentBlock } from '@deepseek-ai/dsh-llm'
 import { GfSkillRegistry, renderSkillBody, type GfSkillEntry } from './core/catalog.ts'
 import { runDoctor } from './core/doctor.ts'
+import { buildHandoff, type HandoffDocument } from './core/handoff.ts'
 import { route, routePreview, type RouteDecision } from './core/route.ts'
 import { openStateStore, emptyState, type FableState } from './core/state.ts'
 import {
@@ -59,6 +61,29 @@ export class GfPolicy extends Service {
     tools.register(this.toolSpec('gf_route', 'Execute the mulqi-getfable task router on a task string. Read-only by default (apply omitted/false); apply:true persists the decision into the durable .fable state.', (args, exec) => this.routeTool(args, exec), routeParams()))
     tools.register(this.toolSpec('gf_doctor', 'Run bounded mulqi-getfable diagnostics over the .fable project state. With fix:true, perform one idempotent bounded repair and report what it changed.', (args, exec) => this.doctorTool(args, exec), doctorParams()))
     tools.register(this.toolSpec('gf_skills', 'Return the registry of mulqi-getfable canonical lifecycle skills with categories and load state.', () => ok(this.skillInfos())))
+    tools.register(this.toolSpec('gf_handoff', 'Produce a complete, self-contained handoff document for another session or agent: durable state, active card, what remains, open ledger findings, and an explicit re-verify list. Read-only.', async (_args, exec) => ok(await this.handoffTool(exec))))
+  }
+
+  private async handoffTool(exec: ToolRunContext): Promise<HandoffDocument> {
+    const root = await this.resolveRoot(exec)
+    const store = this.storeFor(root)
+    const state = store.hasProject ? store.loadSync() : null
+    let ledgerText: string | undefined
+    try {
+      const candidate = `${store.fableDir}/task_plan.md`
+      const atRoot = `${store.fableDir.slice(0, -'.fable'.length)}/task_plan.md`
+      const path = existsSync(candidate) ? candidate : atRoot
+      if (existsSync(path)) ledgerText = readFileSync(path, 'utf8')
+    } catch {
+      ledgerText = undefined
+    }
+    return buildHandoff({
+      projectRoot: root,
+      version: PLUGIN_VERSION,
+      hasProject: store.hasProject && state !== null,
+      state,
+      ledgerText,
+    })
   }
 
   private async routeTool(args: Record<string, unknown>, exec: ToolRunContext): Promise<unknown> {
@@ -404,11 +429,10 @@ export class GfPolicy extends Service {
     const store = this.storeFor(root)
     let ledgerText: string | undefined
     try {
-      const fs = require('node:fs') as typeof import('node:fs')
       const candidate = `${store.fableDir}/task_plan.md`
       const atRoot = `${store.fableDir.slice(0, -'.fable'.length)}/task_plan.md`
-      const path = fs.existsSync(candidate) ? candidate : atRoot
-      if (fs.existsSync(path)) ledgerText = fs.readFileSync(path, 'utf8')
+      const path = existsSync(candidate) ? candidate : atRoot
+      if (existsSync(path)) ledgerText = readFileSync(path, 'utf8')
     } catch {
       ledgerText = undefined
     }
